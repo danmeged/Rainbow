@@ -27,10 +27,12 @@ bool blinking = false;
 bool dayModeStart = false;
 bool nightModeStart = false;
 unsigned long blinkingMillis = 0; // Store the overall time LED is blinking
-unsigned long blinkInterval = 10000; // interval at which to blink (milliseconds)
+// unsigned long blinkInterval = 10000; // interval at which to blink (milliseconds)
+unsigned long blinkInterval = 200000; // interval at which to blink (milliseconds)
 
 // Relay
 static const uint8_t RELAY_PIN = 10; // the number of the relay pin
+
 
 // Rainbow colors
 CRGB rainbow_colors[] = {
@@ -45,10 +47,19 @@ CRGB rainbow_colors[] = {
   // CRGB(0, 0, 255), //test
 };
 
+CRGB no_color = CRGB(0, 0, 0);
+
 #define RAINBOW_SIZE (sizeof(rainbow_colors)/sizeof(*rainbow_colors))
 
-DMX_LED led1(4,5,6, rainbow_colors[0]); // set as red
-DMX_LED led2(13,14,15, rainbow_colors[0]); // set as red
+// DMX_LED led1(4,5,6, rainbow_colors[0]); // set as red
+// DMX_LED led2(13,14,15, rainbow_colors[0]); // set as red
+
+
+DMX_LED my_dmx_leds[] = {
+  DMX_LED(4,5,6, no_color),
+  DMX_LED(13,14,15, no_color)
+};
+#define DMX_LED_SIZE (sizeof(my_dmx_leds)/sizeof(*my_dmx_leds))
 
 void setup() {
   // Set up the relay pin and set it off
@@ -61,13 +72,20 @@ void setup() {
   // Init RTC module
   rtc.begin();
 
+  // Wait for one second before DMX
+  delay(1000);
   // Init DMX serial connection - lights
   DMXSerial.init(DMXController);
-
+  
+  
   // Init serial port for DFPlayer Mini
+  // Wait for one second before softwareSerial
+  delay(1000);
   softwareSerial.begin(9600);
   
   // Start communication with DFPlayer Mini
+  // Wait for one second before init DFPlayer
+  delay(1000);
   if (player.begin(softwareSerial)) {
     lcd.print("Rainbow Chasers!");
     player.enableDAC();
@@ -80,10 +98,11 @@ void setup() {
   } else {
     lcd.print("DF Failed!");
   }
-
 }
 
+
 void loop() {
+  
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
   lcd.setCursor(0, 1);
@@ -92,34 +111,26 @@ void loop() {
   Time my_time = rtc.getTime();
   
   if (is_day_mode(my_time)) {
-    if(!dayModeStart) {
-      // start of day mode
-      dayModeStart = true;
-      nightModeStart = false;
-    }
-    lcd.print("DAY "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
+    prepare_day(my_time);
     day_mode(my_time);
     // day_mode_continuous();
   }
   else {
-    lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
-    if(!nightModeStart) {
-      // start of night mode
-      nightModeStart = true;
-      dayModeStart = false;
-      stop_fountain();
-    }
+    prepare_night(my_time);
     night_mode(my_time);
-
   }
-  
 }
 
 
 // Return True if time is between 8:00 and 20:00
 boolean is_day_mode(Time my_time) {
-  return (8 <= my_time.hour && my_time.hour <= 20 );
-  // return (48 <= my_time.min && my_time.min < 49 );
+
+
+  // DEBUGGGGGGGGGGGG - remove !(...) from return
+
+
+  return !(8 <= my_time.hour && my_time.hour <= 20 );
+  // return (39 <= my_time.min && my_time.min < 40 );
 }
 
 
@@ -160,15 +171,79 @@ void day_mode(Time my_time) {
 // Night mode logic
 void night_mode(Time my_time) {
   // hi night
+
+  if (my_time.min % 34 == 0) {
+    player.play(1); 
+    if (!blinking) {
+      // Start blinking
+      start_fountain();
+      blinking = true;
+      blinkingMillis = millis();
+    }
+  }
+  if(blinking) {
+    //  Check if interval passed
+    if (millis() - blinkingMillis >= blinkInterval) {
+        // Stop blinking
+        stop_fountain();
+        blinking = false;
+    }
+    EVERY_N_MILLISECONDS(1000) {
+      // Set color
+      for(int i=0; i<=DMX_LED_SIZE; ++i) {
+        CRGB newColor = rainbow_colors[random(RAINBOW_SIZE)];
+        while (my_dmx_leds[i].isSameColor(newColor)) {
+          newColor = rainbow_colors[random(RAINBOW_SIZE)];
+        } 
+        my_dmx_leds[i].setNewColor(newColor);
+        newColor = rainbow_colors[random(RAINBOW_SIZE)]; // change color
+      }
+    }
+
+    // Blend color
+    EVERY_N_MILLISECONDS(2) {
+      for(int i=0; i<=DMX_LED_SIZE; ++i) {
+        my_dmx_leds[i].blendColor();
+      }  
+    }
+  }
 }
 
+// Preare the day mode function
+void prepare_day(Time my_time) {
+  char lcd_msg[16] = ""; // LCD Message
+  if(!dayModeStart) {
+    // start of day mode
+    dayModeStart = true;
+    nightModeStart = false;
+    lcd.print("                ");
+    lcd.setCursor(0, 1);
+  }
+  // lcd.print(sprintf(lcd_msg, "DAY: %01d:%01d:%01d", my_time.hour, my_time.min, my_time.sec));
+  lcd.print("DAY "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
+}
 
+// Preare the night mode function
+void prepare_night(Time my_time) {
+  char lcd_msg[16]; // LCD Message
+  if(!nightModeStart) {
+    // start of night mode
+    nightModeStart = true;
+    dayModeStart = false;
+    stop_fountain();
+    lcd.print("                ");
+    lcd.setCursor(0, 1); 
+  }
+  // lcd.print("NIGHT"); //sprintf(lcd_msg, "NIGHT")); //: %01d:%01d:%01d ", my_time.hour, my_time.min, my_time.sec));
+  lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
+}
 
-
+// Start the relay with fountain
 void start_fountain(){
   digitalWrite(RELAY_PIN, LOW);
 }
 
+// Stop the relay with fountain
 void stop_fountain(){
   digitalWrite(RELAY_PIN, HIGH);
 }

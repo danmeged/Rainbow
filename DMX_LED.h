@@ -24,7 +24,7 @@ class DMX_LED {
   public:
     DMX_LED(int myRedChannel, int myGreenChannel, int myBlueChannel, CRGB initialColor);
     
-    void setColor(CRGB myNewColor);
+    void setNewColor(CRGB myNewColor);
     void blendColor();
     bool isSameColor(CRGB color);
 };

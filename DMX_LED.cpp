@@ -24,14 +24,14 @@ DMX_LED::DMX_LED(int myRedChannel, int myGreenChannel, int myBlueChannel, CRGB i
   DMXSerial.write(blueChannel, blueVal);
 }
 
-void DMX_LED::setColor(CRGB myNewColor) {
+void DMX_LED::setNewColor(CRGB myNewColor) {
   newColor = myNewColor;
   // newRedVal = newColor.red;
   // newGreenVal = newColor.green;
   // newBlueVal = newColor.blue;
   newRedVal = myNewColor.red;
   newGreenVal = myNewColor.green;
-  newBlueVal = myNewColor.blue; 
+  newBlueVal = myNewColor.blue;
 }
 
 void DMX_LED::blendColor() {
@@ -72,8 +72,5 @@ void DMX_LED::blendColor() {
 }
 
 bool DMX_LED::isSameColor(CRGB color) {
-  if(color.red != newColor.red || color.green != newColor.green || color.blue != newColor.blue) {
-    return false;
-  }
-  return true;
+  return (color.red == newColor.red && color.green == newColor.green && color.blue == newColor.blue);
 }
