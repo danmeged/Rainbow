@@ -7,7 +7,7 @@
 #define DMX_USE_PORT1
 #include "DMX_LED.h"
 
-
+// Init LCD pins and LCD object
 const int rs = 12, en = 11, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
