@@ -17,6 +17,7 @@ DS3231  rtc(SDA, SCL);
 // Use pins 2 and 3 to communicate with DFPlayer Mini
 static const uint8_t MP3_TX_PIN = 2; // Connects to module's RX 
 static const uint8_t MP3_RX_PIN = 3; // Connects to module's TX 
+static const uint8_t MP3_BUSY_PIN = 13;
 
 // Create the Player object
 SoftwareSerial softwareSerial(MP3_RX_PIN, MP3_TX_PIN);
@@ -26,9 +27,11 @@ DFRobotDFPlayerMini player;
 bool blinking = false;
 bool dayModeStart = false;
 bool nightModeStart = false;
+bool notPlaying = true;
 unsigned long blinkingMillis = 0; // Store the overall time LED is blinking
 // unsigned long blinkInterval = 10000; // interval at which to blink (milliseconds)
-unsigned long blinkInterval = 200000; // interval at which to blink (milliseconds)
+unsigned long blinkInterval = 300000; // interval at which to blink (milliseconds)
+unsigned long nightBlinkInterval = 13000; // interval at which to blink (milliseconds)
 
 // Relay
 static const uint8_t RELAY_PIN = 10; // the number of the relay pin
@@ -85,9 +88,13 @@ void setup() {
   
   // Start communication with DFPlayer Mini
   // Wait for one second before init DFPlayer
-  delay(1000);
+  delay(3000);
   if (player.begin(softwareSerial)) {
     lcd.print("Rainbow Chasers!");
+    
+    // Set busy pin as input
+    pinMode(MP3_BUSY_PIN, INPUT);
+
     player.enableDAC();
     player.outputSetting(true, 100);
 
@@ -125,11 +132,7 @@ void loop() {
 // Return True if time is between 8:00 and 20:00
 boolean is_day_mode(Time my_time) {
 
-
-  // DEBUGGGGGGGGGGGG - remove !(...) from return
-
-
-  return !(8 <= my_time.hour && my_time.hour <= 20 );
+  return (8 <= my_time.hour && my_time.hour <= 20 );
   // return (39 <= my_time.min && my_time.min < 40 );
 }
 
@@ -172,8 +175,8 @@ void day_mode(Time my_time) {
 void night_mode(Time my_time) {
   // hi night
 
-  if (my_time.min % 34 == 0) {
-    player.play(1); 
+  if (my_time.min == 39 && !blinking) {
+    player.play(5);
     if (!blinking) {
       // Start blinking
       start_fountain();
@@ -181,9 +184,12 @@ void night_mode(Time my_time) {
       blinkingMillis = millis();
     }
   }
+
   if(blinking) {
     //  Check if interval passed
-    if (millis() - blinkingMillis >= blinkInterval) {
+    // if (notPlaying) {
+    notPlaying = digitalRead(MP3_BUSY_PIN);
+    if (millis() - blinkingMillis >= nightBlinkInterval && notPlaying) {
         // Stop blinking
         stop_fountain();
         blinking = false;
@@ -247,4 +253,8 @@ void start_fountain(){
 void stop_fountain(){
   digitalWrite(RELAY_PIN, HIGH);
 }
+
+// bool is_playing(){
+//   return !(digitalRead(MP3_BUSY_PIN)); // busy pin is 0 if playing
+// }
 
