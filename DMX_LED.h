@@ -27,6 +27,7 @@ class DMX_LED {
     void setNewColor(CRGB myNewColor);
     void blendColor();
     bool isSameColor(CRGB color);
+    void setColor(CRGB color);
 };
 
 #endif

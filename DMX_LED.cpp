@@ -45,12 +45,16 @@ void DMX_LED::blendColor() {
   else if (redVal > newRedVal) {
     redVal--;
   }
+  DMXSerial.write(redChannel, redVal);
+
   if (greenVal < newGreenVal) {
     greenVal++;
   }
   else if (greenVal > newGreenVal) {
     greenVal--;
   }
+  DMXSerial.write(greenChannel, greenVal);
+
   if (blueVal < newBlueVal) {
     blueVal++;
   }
@@ -58,8 +62,6 @@ void DMX_LED::blendColor() {
     blueVal--;
   }
   // DmxSimple.maxChannel(0);
-  DMXSerial.write(redChannel, redVal);
-  DMXSerial.write(greenChannel, greenVal);
   DMXSerial.write(blueChannel, blueVal);
           
   // DmxSimple.write(13, redVal);
@@ -73,4 +75,20 @@ void DMX_LED::blendColor() {
 
 bool DMX_LED::isSameColor(CRGB color) {
   return (color.red == newColor.red && color.green == newColor.green && color.blue == newColor.blue);
+}
+
+void DMX_LED::setColor(CRGB color) {
+  DMXSerial.write(redChannel, color.red);
+  redVal = color.red;
+  newRedVal = color.red;
+
+  DMXSerial.write(greenChannel, color.green);
+  greenVal = color.green;
+  newGreenVal = color.green;
+
+  DMXSerial.write(blueChannel, color.blue);
+  blueVal =  color.blue;
+  newBlueVal =  color.blue;
+
+  newColor = color;
 }
