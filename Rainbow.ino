@@ -6,22 +6,27 @@
 #include <DMXSerial.h>
 #define DMX_USE_PORT1
 #include "DMX_LED.h"
+#include "Song.h"
 
 // Init LCD pins and LCD object
 const int rs = 12, en = 11, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
+
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
+
 
 // Use pins 2 and 3 to communicate with DFPlayer Mini
 static const uint8_t MP3_TX_PIN = 2; // Connects to module's RX 
 static const uint8_t MP3_RX_PIN = 3; // Connects to module's TX 
-static const uint8_t MP3_BUSY_PIN = 13;
+static const uint8_t MP3_BUSY_PIN = 13; // Connects to module's BUSY
+
 
 // Create the Player object
 SoftwareSerial softwareSerial(MP3_RX_PIN, MP3_TX_PIN);
 DFRobotDFPlayerMini player;
+
 
 // Is preforming action? aka blinking
 bool blinking = false;
@@ -32,6 +37,7 @@ unsigned long blinkingMillis = 0; // Store the overall time LED is blinking
 // unsigned long blinkInterval = 10000; // interval at which to blink (milliseconds)
 unsigned long blinkInterval = 300000; // interval at which to blink (milliseconds)
 unsigned long nightBlinkInterval = 13000; // interval at which to blink (milliseconds)
+
 
 // Relay
 static const uint8_t RELAY_PIN = 10; // the number of the relay pin
@@ -51,7 +57,6 @@ CRGB rainbow_colors[] = {
 };
 
 CRGB no_color = CRGB(0, 0, 0);
-
 #define RAINBOW_SIZE (sizeof(rainbow_colors)/sizeof(*rainbow_colors))
 
 // DMX_LED led1(4,5,6, rainbow_colors[0]); // set as red
@@ -63,6 +68,25 @@ DMX_LED my_dmx_leds[] = {
   DMX_LED(13,14,15, no_color)
 };
 #define DMX_LED_SIZE (sizeof(my_dmx_leds)/sizeof(*my_dmx_leds))
+
+int rate = 0;
+Song my_songs[]= {
+  Song(120), // 0
+  Song(120), // 1
+  Song(120), // 2
+  Song(120), // 3
+  Song(120), // 4
+  Song(120), // 5
+  Song(120), // 6
+  Song(120), // 7
+  Song(120), // 8
+  Song(120), // 9
+  Song(120), // 10
+  Song(120), // 11
+  Song(120), // 12
+  Song(120), // 13  
+};
+#define SONGS_NUM (sizeof(my_songs)/sizeof(*my_songs))
 
 void setup() {
   // Set up the relay pin and set it off
@@ -79,7 +103,6 @@ void setup() {
   delay(1000);
   // Init DMX serial connection - lights
   DMXSerial.init(DMXController);
-  
   
   // Init serial port for DFPlayer Mini
   // Wait for one second before softwareSerial
@@ -175,8 +198,11 @@ void day_mode(Time my_time) {
 void night_mode(Time my_time) {
   // hi night
 
-  if (my_time.min == 39 && !blinking) {
-    player.play(5);
+  if (my_time.min == 24 && !blinking) {
+    int track_num = random(SONGS_NUM);
+    rate = 60000 / my_songs[track_num].getBPM();
+
+    player.play(track_num);
     if (!blinking) {
       // Start blinking
       start_fountain();
@@ -194,7 +220,7 @@ void night_mode(Time my_time) {
         stop_fountain();
         blinking = false;
     }
-    EVERY_N_MILLISECONDS(1000) {
+    EVERY_N_MILLISECONDS(rate) {
       // Set color
       for(int i=0; i<=DMX_LED_SIZE; ++i) {
         CRGB newColor = rainbow_colors[random(RAINBOW_SIZE)];
