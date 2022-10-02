@@ -128,6 +128,8 @@ void setup() {
   } else {
     lcd.print("DF Failed!");
   }
+
+  randomSeed(analogRead(0));
 }
 
 
@@ -155,7 +157,10 @@ void loop() {
 // Return True if time is between 8:00 and 20:00
 boolean is_day_mode(Time my_time) {
 
-  return (8 <= my_time.hour && my_time.hour <= 20 );
+
+  // TODO: remove "!"
+
+  return !(8 <= my_time.hour && my_time.hour <= 20 );
   // return (39 <= my_time.min && my_time.min < 40 );
 }
 
@@ -198,9 +203,11 @@ void day_mode(Time my_time) {
 void night_mode(Time my_time) {
   // hi night
 
-  if (my_time.min == 24 && !blinking) {
+  if (my_time.min == 31 && !blinking) {
     int track_num = random(SONGS_NUM);
     rate = 60000 / my_songs[track_num].getBPM();
+
+    lcd.print("track "+String(track_num)+" rate:"+String(rate));
 
     player.play(track_num);
     if (!blinking) {
@@ -267,7 +274,7 @@ void prepare_night(Time my_time) {
     lcd.setCursor(0, 1); 
   }
   // lcd.print("NIGHT"); //sprintf(lcd_msg, "NIGHT")); //: %01d:%01d:%01d ", my_time.hour, my_time.min, my_time.sec));
-  lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
+  // lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
 }
 
 // Start the relay with fountain
