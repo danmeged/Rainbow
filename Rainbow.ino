@@ -64,9 +64,9 @@ CRGB no_color = CRGB(0, 0, 0);
 
 
 DMX_LED my_dmx_leds[] = {
-  // DMX_LED(73,74,75, no_color),
+  DMX_LED(73,74,75, no_color),
   // DMX_LED(1,2,3, no_color),
-  // DMX_LED(67,68,69, no_color)
+  DMX_LED(67,68,69, no_color),
   DMX_LED(40,41,42, no_color),
   DMX_LED(49,50,51, no_color)
 };
@@ -74,7 +74,7 @@ DMX_LED my_dmx_leds[] = {
 
 int rate = 0;
 Song my_songs[]= {
-  Song(120), // 0
+  Song(95), // 0
   Song(120), // 1
   Song(120), // 2
   Song(120), // 3
@@ -160,12 +160,7 @@ void loop() {
 
 // Return True if time is between 8:00 and 20:00
 boolean is_day_mode(Time my_time) {
-
-
-  // TODO: remove "!"
-
   return (8 <= my_time.hour && my_time.hour <= 20 );
-  // return (39 <= my_time.min && my_time.min < 40 );
 }
 
 
@@ -178,13 +173,12 @@ void day_mode_continuous() {
 void day_mode(Time my_time) {
   // hi day
   // TODO: is (my_time.sec < 2) ok?
-  if (my_time.min % 2 == 0 && my_time.sec < 2) {
-   if (!blinking) {
-      // Start blinking
-      start_fountain();
-      blinking = true;
-      blinkingMillis = millis();
-    }
+  if (my_time.min == 0 && !blinking) {
+    // Start blinking
+    start_fountain();
+    blinking = true;
+    blinkingMillis = millis();
+    
   }
   
   // Check the time passed from when started blinking
@@ -198,6 +192,7 @@ void day_mode(Time my_time) {
 
   // If not blinking, wait for a second
   if(!blinking) {
+    close_lights();
     delay(1000);
   }
 }
@@ -207,13 +202,15 @@ void day_mode(Time my_time) {
 void night_mode(Time my_time) {
   // hi night
 
-  if (my_time.min == 27 && !blinking) {
-    int track_num = random(SONGS_NUM);
+  if (my_time.min == 0 && !blinking) {
+    int track_num = random(0,SONGS_NUM);
     rate = 60000 / my_songs[track_num].getBPM();
 
     // lcd.print("track "+String(track_num)+" rate:"+String(rate));
 
     player.play(track_num);
+    // rate = 60000 / 53;
+    // player.play(1);
       
     // Start blinking
     start_fountain();
@@ -228,9 +225,7 @@ void night_mode(Time my_time) {
       // Stop blinking
       stop_fountain();
       blinking = false;
-      for(int i=0; i<=DMX_LED_SIZE; ++i) {
-        my_dmx_leds[i].setColor(no_color);
-      }
+      close_lights();
     }
 
     
@@ -238,10 +233,11 @@ void night_mode(Time my_time) {
       // Set color
       for(int i=0; i<=DMX_LED_SIZE; ++i) {
         CRGB newColor = rainbow_colors[random(RAINBOW_SIZE)];
-        // while (my_dmx_leds[i].isSameColor(newColor)) {
-        //   newColor = rainbow_colors[random(RAINBOW_SIZE)];
-        // } 
+        while (my_dmx_leds[i].isSameColor(newColor)) {
+          newColor = rainbow_colors[random(RAINBOW_SIZE)];
+        } 
         my_dmx_leds[i].setNewColor(newColor);
+        // my_dmx_leds[i].setColor(newColor);
       }
     }
 
@@ -251,6 +247,12 @@ void night_mode(Time my_time) {
         my_dmx_leds[i].blendColor();
       }  
     }
+  }
+
+  if(!blinking) {
+    close_lights();
+    delay(1000);
+
   }
 }
 
@@ -293,6 +295,11 @@ void stop_fountain(){
   digitalWrite(RELAY_PIN, HIGH);
 }
 
+void close_lights() {
+  for(int i=0; i<=DMX_LED_SIZE; ++i) {
+    my_dmx_leds[i].setColor(no_color);
+  }
+}
 // bool is_playing(){
 //   return !(digitalRead(MP3_BUSY_PIN)); // busy pin is 0 if playing
 // }
