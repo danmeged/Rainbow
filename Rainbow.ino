@@ -33,7 +33,10 @@ bool blinking = false;
 bool dayModeStart = false;
 bool nightModeStart = false;
 bool notPlaying = true;
+bool countDownStarted = false;
+bool countDownFinished = false;
 unsigned long blinkingMillis = 0; // Store the overall time LED is blinking
+unsigned long countdownMillis = 0;
 // unsigned long blinkInterval = 10000; // interval at which to blink (milliseconds)
 unsigned long blinkInterval = 300000; // interval at which to blink (milliseconds)
 unsigned long nightBlinkInterval = 13000; // interval at which to blink (milliseconds)
@@ -117,7 +120,7 @@ void setup() {
   // Wait for one second before init DFPlayer
   delay(3000);
   if (player.begin(softwareSerial)) {
-    // lcd.print("Rainbow Chasers!");
+    lcd.print("Rainbow Chasers!");
     
     // Set busy pin as input
     pinMode(MP3_BUSY_PIN, INPUT);
@@ -127,8 +130,6 @@ void setup() {
 
     // Set volume to maximum (0 to 30).
     player.volume(30);
-    // Play the first MP3 file on the SD card
-    // player.play(1);
   } else {
     lcd.print("DF Failed!");
   }
@@ -227,8 +228,21 @@ void day_mode(Time my_time) {
 void night_mode(Time my_time) {
   // hi night
 
-  // TODO: remove "%1" from my_time.min
-  if (my_time.min%1 == 0 && !blinking) {
+  // check if its time to countdown
+  if (my_time.min == 56 && !blinking && !countDownStarted) {
+    player.play(countDownSong.getTrackNumber());
+    countDownStarted = true;
+    countdownMillis = millis();
+  }
+  if (countDownStarted) {
+    notPlaying = digitalRead(MP3_BUSY_PIN);
+    if (millis() - countdownMillis >= nightBlinkInterval && notPlaying) {
+      countDownFinished = true;
+    }    
+  }
+
+  // if (my_time.min%1 == 0 && countDownFinished && !blinking ) {
+  if (countDownFinished && !blinking ) {
     int track_index = random(SONGS_NUM-1);
     int bpm = my_songs[track_index].getBPM();
     int track_num = my_songs[track_index].getTrackNumber();
@@ -246,10 +260,14 @@ void night_mode(Time my_time) {
     //  Check if interval passed
     notPlaying = digitalRead(MP3_BUSY_PIN);
     if (millis() - blinkingMillis >= nightBlinkInterval && notPlaying) {
-      // Stop blinking
+      // Stop blinki
+      
+      ng
       stop_fountain();
       blinking = false;
       close_lights();
+      countDownStarted = false;
+      countDownFinished = false;
     }
 
     EVERY_N_MILLISECONDS(rate) {
