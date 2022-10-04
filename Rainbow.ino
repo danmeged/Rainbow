@@ -64,9 +64,11 @@ CRGB no_color = CRGB(0, 0, 0);
 
 
 DMX_LED my_dmx_leds[] = {
-  DMX_LED(73,74,75, no_color),
+  // DMX_LED(73,74,75, no_color),
   // DMX_LED(1,2,3, no_color),
-  DMX_LED(67,68,69, no_color),
+  // DMX_LED(67,68,69, no_color),
+  DMX_LED(13,14,15, no_color),
+  DMX_LED(109,110,111, no_color),
   DMX_LED(40,41,42, no_color),
   DMX_LED(49,50,51, no_color)
 };
@@ -74,22 +76,21 @@ DMX_LED my_dmx_leds[] = {
 
 int rate = 0;
 Song my_songs[]= {
-  Song(95), // 0
-  Song(120), // 1
-  Song(120), // 2
-  Song(120), // 3
-  Song(120), // 4
-  Song(120), // 5
-  Song(120), // 6
-  Song(120), // 7
-  Song(120), // 8
-  Song(120), // 9
-  Song(120), // 10
-  Song(120), // 11
-  Song(120), // 12
-  Song(120), // 13  
+  Song(120,1), // rainbow & waterfall
+  Song(120,2), // dolly & miley
+  Song(120,3), // here comes the sun
+  Song(120,5), // robert plant
+  Song(120,6), // over the rainbow (original)
+  Song(120,7), // bob marley rainbow country
+  Song(120,8), // make me rainbow (jazz)
+  Song(120,9), // over the rainbow - Israel Kamakawiwoole
+  Song(120,10), // shes a rainbow - rolling stones
+  Song(120,11), // over the rainbow - bossa nova
+  Song(120,12), // ananim hem satlanim
+  Song(120,13), // over the rainbow - acoustic singer
 };
 #define SONGS_NUM (sizeof(my_songs)/sizeof(*my_songs))
+Song countDownSong = Song(0,4); // CountDown
 
 void setup() {
   // Set up the relay pin and set it off
@@ -116,7 +117,7 @@ void setup() {
   // Wait for one second before init DFPlayer
   delay(3000);
   if (player.begin(softwareSerial)) {
-    lcd.print("Rainbow Chasers!");
+    // lcd.print("Rainbow Chasers!");
     
     // Set busy pin as input
     pinMode(MP3_BUSY_PIN, INPUT);
@@ -133,7 +134,8 @@ void setup() {
   }
 
   // randomSeed(analogRead(0));
-  randomSeed(rtc.getUnixTime(rtc.getTime()));
+  unsigned long unixTime = rtc.getUnixTime(rtc.getTime());
+  randomSeed(unixTime);
 }
 
 
@@ -169,10 +171,10 @@ void day_mode_continuous() {
   start_fountain();
 }
 
-// Day mode logic
-void day_mode(Time my_time) {
-  // hi day
-  // TODO: is (my_time.sec < 2) ok?
+
+// OLD DAY MODE - JUST FOR REFERENCE
+/*
+void old_day_mode() {
   if (my_time.min == 0 && !blinking) {
     // Start blinking
     start_fountain();
@@ -196,21 +198,43 @@ void day_mode(Time my_time) {
     delay(1000);
   }
 }
+*/
+
+
+// Day mode logic
+void day_mode(Time my_time) {
+  // hi day
+  if ((8 <= my_time.hour && my_time.hour < 12) ||
+      (14 <= my_time.hour && my_time.hour < 18)) {
+    if (!blinking) {
+      // Start blinking
+      start_fountain();
+      blinking = true;
+      blinkingMillis = millis(); 
+    }
+  }
+  else {
+    stop_fountain();
+    blinking = false;
+  }
+  
+  close_lights();
+  delay(1000);
+}
 
 
 // Night mode logic
 void night_mode(Time my_time) {
   // hi night
 
-  if (my_time.min == 0 && !blinking) {
-    int track_num = random(0,SONGS_NUM);
-    rate = 60000 / my_songs[track_num].getBPM();
-
-    // lcd.print("track "+String(track_num)+" rate:"+String(rate));
-
+  // TODO: remove "%1" from my_time.min
+  if (my_time.min%1 == 0 && !blinking) {
+    int track_index = random(SONGS_NUM-1);
+    int bpm = my_songs[track_index].getBPM();
+    int track_num = my_songs[track_index].getTrackNumber();
+    rate = 60000/bpm;
+    lcd.print("track:"+String(track_num));
     player.play(track_num);
-    // rate = 60000 / 53;
-    // player.play(1);
       
     // Start blinking
     start_fountain();
@@ -228,7 +252,6 @@ void night_mode(Time my_time) {
       close_lights();
     }
 
-    
     EVERY_N_MILLISECONDS(rate) {
       // Set color
       for(int i=0; i<=DMX_LED_SIZE; ++i) {
@@ -237,7 +260,6 @@ void night_mode(Time my_time) {
           newColor = rainbow_colors[random(RAINBOW_SIZE)];
         } 
         my_dmx_leds[i].setNewColor(newColor);
-        // my_dmx_leds[i].setColor(newColor);
       }
     }
 
@@ -282,7 +304,7 @@ void prepare_night(Time my_time) {
     lcd.setCursor(0, 1); 
   }
   // lcd.print("NIGHT"); //sprintf(lcd_msg, "NIGHT")); //: %01d:%01d:%01d ", my_time.hour, my_time.min, my_time.sec));
-  lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
+  // lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
 }
 
 // Start the relay with fountain

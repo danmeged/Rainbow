@@ -7,10 +7,12 @@
 class Song {
   private:
     int bpm;
+    int number;
 
   public:
-    Song(int myBPM);
+    Song(int myBPM, int songNumber);
     int getBPM();
+    int getTrackNumber();
 };
 
 #endif
