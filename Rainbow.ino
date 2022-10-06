@@ -30,14 +30,13 @@ DFRobotDFPlayerMini player;
 
 // Is preforming action? aka blinking
 bool blinking = false;
-bool dayModeStart = false;
-bool nightModeStart = false;
-bool notPlaying = true;
-bool countDownStarted = false;
-bool countDownFinished = false;
+bool dayModeStart = false; // did day mode just started
+bool nightModeStart = false; // did night mode just started
+bool notPlaying = true; // is not playing
+bool countDownStarted = false; // did countdown started
+bool countDownFinished = false; // did countdown finished
 unsigned long blinkingMillis = 0; // Store the overall time LED is blinking
-unsigned long countdownMillis = 0;
-// unsigned long blinkInterval = 10000; // interval at which to blink (milliseconds)
+unsigned long countdownMillis = 0; // Store the overall time of countdown
 unsigned long blinkInterval = 300000; // interval at which to blink (milliseconds)
 unsigned long nightBlinkInterval = 13000; // interval at which to blink (milliseconds)
 
@@ -56,16 +55,12 @@ CRGB rainbow_colors[] = {
   CRGB(75, 0, 130), //indigo
   CRGB(6, 190, 5), //green
   CRGB(0, 6, 255), //blue
-  // CRGB(0, 0, 255), //test
 };
 
 CRGB no_color = CRGB(0, 0, 0);
 #define RAINBOW_SIZE (sizeof(rainbow_colors)/sizeof(*rainbow_colors))
 
-// DMX_LED led1(4,5,6, rainbow_colors[0]); // set as red
-// DMX_LED led2(13,14,15, rainbow_colors[0]); // set as red
-
-
+// DMS leds
 DMX_LED my_dmx_leds[] = {
   // DMX_LED(73,74,75, no_color),
   // DMX_LED(1,2,3, no_color),
@@ -77,6 +72,7 @@ DMX_LED my_dmx_leds[] = {
 };
 #define DMX_LED_SIZE (sizeof(my_dmx_leds)/sizeof(*my_dmx_leds))
 
+// Songs
 int rate = 0;
 Song my_songs[]= {
   Song(120,1), // rainbow & waterfall
@@ -94,6 +90,17 @@ Song my_songs[]= {
 };
 #define SONGS_NUM (sizeof(my_songs)/sizeof(*my_songs))
 Song countDownSong = Song(0,4); // CountDown
+
+
+// Peripheral leds
+#define NUM_LEDS 100
+
+// For led chips like WS2812, which have a data line, ground, and power, you just
+// need to define DATA_PIN.
+#define DATA_PIN 8
+
+// Define the array of leds
+CRGB leds[NUM_LEDS];
 
 void setup() {
   // Set up the relay pin and set it off
@@ -134,9 +141,14 @@ void setup() {
     lcd.print("DF Failed!");
   }
 
-  // randomSeed(analogRead(0));
   unsigned long unixTime = rtc.getUnixTime(rtc.getTime());
   randomSeed(unixTime);
+
+  // Peripheral leds setup
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
+
+  FastLED.clear();
+  FastLED.show();
 }
 
 
@@ -173,38 +185,10 @@ void day_mode_continuous() {
 }
 
 
-// OLD DAY MODE - JUST FOR REFERENCE
-/*
-void old_day_mode() {
-  if (my_time.min == 0 && !blinking) {
-    // Start blinking
-    start_fountain();
-    blinking = true;
-    blinkingMillis = millis();
-    
-  }
-  
-  // Check the time passed from when started blinking
-  if(blinking) {
-    if (millis() - blinkingMillis >= blinkInterval) {
-        // Stop blinking
-        stop_fountain();
-        blinking = false;
-    }
-  }
-
-  // If not blinking, wait for a second
-  if(!blinking) {
-    close_lights();
-    delay(1000);
-  }
-}
-*/
-
-
 // Day mode logic
 void day_mode(Time my_time) {
   // hi day
+  
   if ((8 <= my_time.hour && my_time.hour < 12) ||
       (14 <= my_time.hour && my_time.hour < 18)) {
     if (!blinking) {
@@ -220,6 +204,7 @@ void day_mode(Time my_time) {
   }
   
   close_lights();
+  stop_peripheral_leds();
   delay(1000);
 }
 
@@ -227,7 +212,9 @@ void day_mode(Time my_time) {
 // Night mode logic
 void night_mode(Time my_time) {
   // hi night
-
+  
+  start_peripheral_leds();
+  
   // check if its time to countdown
   if (my_time.min == 56 && !blinking && !countDownStarted) {
     player.play(countDownSong.getTrackNumber());
@@ -260,9 +247,7 @@ void night_mode(Time my_time) {
     //  Check if interval passed
     notPlaying = digitalRead(MP3_BUSY_PIN);
     if (millis() - blinkingMillis >= nightBlinkInterval && notPlaying) {
-      // Stop blinki
-      
-      ng
+      // Stop blinking
       stop_fountain();
       blinking = false;
       close_lights();
@@ -291,8 +276,7 @@ void night_mode(Time my_time) {
 
   if(!blinking) {
     close_lights();
-    delay(1000);
-
+    // delay(1000);
   }
 }
 
@@ -303,10 +287,10 @@ void prepare_day(Time my_time) {
     // start of day mode
     dayModeStart = true;
     nightModeStart = false;
+    blinking = false;
     lcd.print("                ");
     lcd.setCursor(0, 1);
   }
-  // lcd.print(sprintf(lcd_msg, "DAY: %01d:%01d:%01d", my_time.hour, my_time.min, my_time.sec));
   lcd.print("DAY "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
 }
 
@@ -317,12 +301,12 @@ void prepare_night(Time my_time) {
     // start of night mode
     nightModeStart = true;
     dayModeStart = false;
+    blinking = false;
     stop_fountain();
     lcd.print("                ");
     lcd.setCursor(0, 1); 
   }
-  // lcd.print("NIGHT"); //sprintf(lcd_msg, "NIGHT")); //: %01d:%01d:%01d ", my_time.hour, my_time.min, my_time.sec));
-  // lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
+  lcd.print("NIGHT "+String(my_time.hour)+":"+String(my_time.min)+":"+String(my_time.sec));
 }
 
 // Start the relay with fountain
@@ -335,12 +319,66 @@ void stop_fountain(){
   digitalWrite(RELAY_PIN, HIGH);
 }
 
+// Close DMX lights
 void close_lights() {
   for(int i=0; i<=DMX_LED_SIZE; ++i) {
     my_dmx_leds[i].setColor(no_color);
   }
 }
-// bool is_playing(){
-//   return !(digitalRead(MP3_BUSY_PIN)); // busy pin is 0 if playing
-// }
 
+// Start peripheral leds lights
+void start_peripheral_leds() {
+  pride();
+  FastLED.show();
+}
+
+// Stop peripheral leds lights
+void stop_peripheral_leds() {
+  FastLED.clear();  
+}
+
+// ========================================================================================
+// pride 2015
+
+// This function draws rainbows with an ever-changing,
+// widely-varying set of parameters.
+void pride() 
+{
+  static uint16_t sPseudotime = 0;
+  static uint16_t sLastMillis = 0;
+  static uint16_t sHue16 = 0;
+ 
+  uint8_t sat8 = beatsin88( 87, 220, 250);
+  uint8_t brightdepth = beatsin88( 341, 96, 224);
+  uint16_t brightnessthetainc16 = beatsin88( 203, (25 * 256), (40 * 256));
+  uint8_t msmultiplier = beatsin88(147, 23, 60);
+
+  uint16_t hue16 = sHue16;//gHue * 256;
+  uint16_t hueinc16 = beatsin88(113, 1, 3000);
+  
+  uint16_t ms = millis();
+  uint16_t deltams = ms - sLastMillis ;
+  sLastMillis  = ms;
+  sPseudotime += deltams * msmultiplier;
+  sHue16 += deltams * beatsin88( 400, 5,9);
+  uint16_t brightnesstheta16 = sPseudotime;
+  
+  for( uint16_t i = 0 ; i < NUM_LEDS; i++) {
+    hue16 += hueinc16;
+    uint8_t hue8 = hue16 / 256;
+
+    brightnesstheta16  += brightnessthetainc16;
+    uint16_t b16 = sin16( brightnesstheta16  ) + 32768;
+
+    uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
+    uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
+    bri8 += (255 - brightdepth);
+    
+    CRGB newcolor = CHSV( hue8, sat8, bri8);
+    
+    uint16_t pixelnumber = i;
+    pixelnumber = (NUM_LEDS-1) - pixelnumber;
+    
+    nblend( leds[pixelnumber], newcolor, 64);
+  }
+}
