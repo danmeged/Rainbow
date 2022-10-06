@@ -93,7 +93,7 @@ Song countDownSong = Song(0,4); // CountDown
 
 
 // Peripheral leds
-#define NUM_LEDS 100
+#define NUM_LEDS 300
 
 // For led chips like WS2812, which have a data line, ground, and power, you just
 // need to define DATA_PIN.
