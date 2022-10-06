@@ -12,7 +12,6 @@
 const int rs = 12, en = 11, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
-
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
 
@@ -41,6 +40,7 @@ unsigned long blinkInterval = 300000; // interval at which to blink (millisecond
 unsigned long nightBlinkInterval = 13000; // interval at which to blink (milliseconds)
 
 
+
 // Relay
 static const uint8_t RELAY_PIN = 10; // the number of the relay pin
 
@@ -57,7 +57,7 @@ CRGB rainbow_colors[] = {
   CRGB(0, 6, 255), //blue
 };
 
-CRGB no_color = CRGB(0, 0, 0);
+// CRGB no_color = CRGB(0, 0, 0);
 #define RAINBOW_SIZE (sizeof(rainbow_colors)/sizeof(*rainbow_colors))
 
 // DMS leds
@@ -65,10 +65,10 @@ DMX_LED my_dmx_leds[] = {
   // DMX_LED(73,74,75, no_color),
   // DMX_LED(1,2,3, no_color),
   // DMX_LED(67,68,69, no_color),
-  DMX_LED(13,14,15, no_color),
-  DMX_LED(109,110,111, no_color),
-  DMX_LED(40,41,42, no_color),
-  DMX_LED(49,50,51, no_color)
+  DMX_LED(13,14,15, CRGB(0, 0, 0)),
+  DMX_LED(109,110,111, CRGB(0, 0, 0)),
+  DMX_LED(40,41,42, CRGB(0, 0, 0)),
+  DMX_LED(49,50,51, CRGB(0, 0, 0))
 };
 #define DMX_LED_SIZE (sizeof(my_dmx_leds)/sizeof(*my_dmx_leds))
 
@@ -89,7 +89,7 @@ Song my_songs[]= {
   Song(120,13), // over the rainbow - acoustic singer
 };
 #define SONGS_NUM (sizeof(my_songs)/sizeof(*my_songs))
-Song countDownSong = Song(0,4); // CountDown
+// Song countDownSong = Song(0,4); // CountDown
 
 
 // Peripheral leds
@@ -217,7 +217,8 @@ void night_mode(Time my_time) {
   
   // check if its time to countdown
   if (my_time.min == 56 && !blinking && !countDownStarted) {
-    player.play(countDownSong.getTrackNumber());
+    // player.play(countDownSong.getTrackNumber());
+    player.play(Song(0,4).getTrackNumber()); // count down song
     countDownStarted = true;
     countdownMillis = millis();
   }
@@ -282,7 +283,6 @@ void night_mode(Time my_time) {
 
 // Preare the day mode function
 void prepare_day(Time my_time) {
-  char lcd_msg[16] = ""; // LCD Message
   if(!dayModeStart) {
     // start of day mode
     dayModeStart = true;
@@ -296,7 +296,6 @@ void prepare_day(Time my_time) {
 
 // Preare the night mode function
 void prepare_night(Time my_time) {
-  char lcd_msg[16]; // LCD Message
   if(!nightModeStart) {
     // start of night mode
     nightModeStart = true;
@@ -322,7 +321,8 @@ void stop_fountain(){
 // Close DMX lights
 void close_lights() {
   for(int i=0; i<=DMX_LED_SIZE; ++i) {
-    my_dmx_leds[i].setColor(no_color);
+    // my_dmx_leds[i].setColor(no_color);
+    my_dmx_leds[i].setColor(CRGB(0, 0, 0));
   }
 }
 
